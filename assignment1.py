@@ -1,7 +1,5 @@
 import csv
-import os
 from functools import reduce
-from functools import partial
 import re
 # maybe needed if we wanna partially apply a function with > 1 arguments, or we can just structure the function properly
 
@@ -10,31 +8,28 @@ def parse_CSV(path):
     read_dictionary = csv.DictReader(open(path))
     return (read_dictionary.fieldnames, list(read_dictionary))
 
-def get_specific_header(key):
-    def get_header(header):
-        return [element for element in header if element == key]
-    return get_header
-
-def create_filter_function(header):
-    def filter_function_by(value):
-        def filter_function(data):
-            # return [row[header] for row in data if row[header] == value]
-            return filter(lambda x: x[header] == value, data)
-        return filter_function
-    return filter_function_by
-
 def create_filter_function_by_header(header):
     def create_filter_function_by_value(value):
+        record_value = value
+
+        def get_record_value():
+            return record_value
+
         def filter_function(data):
             return filter(lambda x: x[header] == value, data)
-        return filter_function
+        return (get_record_value, filter_function)
     return create_filter_function_by_value
 
 def sanitise_data_input(entry: str):
     return " ".join(re.split("\s+", entry)).strip()
+
+def calculate_total_quantity(accumulator, quantity):
+    return accumulator + quantity
     
 
 def main():
+    # header: a list containing the header row of the dataset
+    # data: the list of dictionary containing the actual records of the dataset 
     header, data = parse_CSV("restaurant_sales_data.csv")
 
     # Sanitise the csv data, by removing unwanted whitespaces in both the key and value of each dictionary in the dataset
@@ -62,8 +57,8 @@ def main():
     # so that we get a dict of header_value -> unique values in the data for each header
     header_values = {h: set([record[h] for record in sanitised_data]) for h in header}
     
-    # for k, v in header_values.items():
-    #     print(k + ": " + str(v))
+    for k, v in header_values.items():
+        print(k + ": " + str(v))
 
     # sanitized_header_values = {key: " ".join(re.split("\s+", str(value))).strip() for key, value in header_values.items()}
     # sanitized_header_values = {key: value for key, value in header_values.items()}
@@ -88,27 +83,39 @@ def main():
     #     p_func = partial(func, "Burger")
     #     p_func(data)
 
-    filter_by_product = create_filter_function("Product")
-    filter_by_burger = filter_by_product("Burgers")
+    # filter_by_product = create_filter_function("Product")
+    # filter_by_burger = filter_by_product("Burgers")
     # print(list(filter_by_burger(data)))
 
-    # filter_func_by_product = [create_filter_function("Product")(row) for row in product_category_set]
+    # filter_func_by_product = [create_filter_function_by_header("Product")(row) for row in product_category_set]
     # for product_func in filter_func_by_product:
     #     category_data = list(product_func(data))
     #     for d in category_data:
     #         print(d)
 
+    filter_by_product_name = create_filter_function_by_header("Product")
+    # filter_func_by_product_name = list(map(filter_by_product_name, product_category_set))
+    filter_func_by_product_name = list(map(filter_by_product_name, product_category_set)) # now it will be a list of tuple (product name, the list of dicts)
+
+    test_length = 0
+
+    for func in filter_func_by_product_name: # func will be a tuple of (product name, the filter function for that category)
+        print(func[0]())
+        filtered_list = list(func[1](sanitised_data))
+
+        total_quantity_for_each_category = reduce(calculate_total_quantity, [int(float(record["Quantity"])) for record in filtered_list])
+        print("Quantity Sold: " + str(int(total_quantity_for_each_category)))
+
+        total_revenue_for_each_category = reduce(calculate_total_quantity, [float(record["Price"]) * int(float(record["Quantity"])) for record in filtered_list])
+        print(f"Revenue Generated: ${total_revenue_for_each_category:.2f}")
+        print()
+        test_length += len(filtered_list)
+        # for entry in filtered_list:
+        #     print(entry)
+
+    print(test_length)
+
     # burger_sales_record = [x(data) for x in filter_func_by_product]
-
-
-    # print(list(filter(lambda row: row["Product"] == "Burger")))
-    # name = "   Remy   Monet  "
-    # sanitize_name = " ".join(re.split("\s+", name)).strip()
-    # print(sanitize_name)
-    # print(len(sanitize_name))
-
-    # testDict = dict({"   key1": "   value   1", "key2    ": "value      2"})
-    # print(dict(map(lambda item: (sanitise_data_input(item[0]), sanitise_data_input(item[1])), testDict.items())))
 
 
 
