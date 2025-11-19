@@ -1,12 +1,6 @@
 import csv
 from functools import reduce
 import re
-# maybe needed if we wanna partially apply a function with > 1 arguments, or we can just structure the function properly
-
-# Establish the initial data (the list of dictionary containing the dataset)
-def parse_CSV(path):
-    read_dictionary = csv.DictReader(open(path))
-    return (read_dictionary.fieldnames, list(read_dictionary))
 
 def create_filter_function_by_header(header):
     def create_filter_function_by_value(value):
@@ -20,14 +14,41 @@ def create_filter_function_by_header(header):
         return (get_record_value, filter_function)
     return create_filter_function_by_value
 
-def sanitise_data_input(entry: str):
-    return " ".join(re.split("\s+", entry)).strip()
-
 def calculate_total_quantity(accumulator, quantity):
     return accumulator + quantity
-    
+
+
+def parse_CSV(path):
+    '''
+    Function to parse a CSV file given a file path
+
+    :param path: The file path to the CSV file 
+    :return: A tuple of two elements, (a list of headers, a list of dictionaries containing the data)
+    '''
+    read_dictionary = csv.DictReader(open(path))
+    return (read_dictionary.fieldnames, list(read_dictionary))
+
+def sanitise_data_input(entry: str):
+    '''
+    Function to sanitise the input string parameter
+
+    :param entry: A string to be sanitised 
+    :return: A string argument, with any leading & trailing whitespaces removed and also any additional whitespaces between words removed
+
+    Example: 
+    Pass in: "   Hello   World!        "
+    Returns: "Hello World!"
+    '''
+
+    # Split entry based on one or more whitespaces (Regex)
+    # Get a list of string, where each element is a word in the string
+    # Join the words using a whitespace
+    # Strip() any leading and traiing whitespace from the final result
+    return " ".join(re.split("\s+", entry)).strip()
 
 def main():
+    ''' Start of TEMPLATE '''
+
     # header: a list containing the header row of the dataset
     # data: the list of dictionary containing the actual records of the dataset 
     header, data = parse_CSV("restaurant_sales_data.csv")
@@ -40,34 +61,40 @@ def main():
     # sanitised_data = [{" ".join(re.split("\s+", key)).strip(): " ".join(re.split("\s+", value)).strip() for key, value in record.items()} for record in data]
 
     # Method 2
-    # sanitised_data = [dict(map(lambda item: (sanitise_data_input(item[0]), sanitise_data_input(item[1])), record.items())) for record in data]
-    # note items() on dict give a list of tuple of key-value pair like [("Product", "Burgers"), ("Manager", "Name")], sth like that
-    # so by using map on record.items(), we apply the sanitise function on each of those tuple
+    # Note: items() on dict give a list of tuple of key-value pair like [("Product", "Burgers"), ("Manager", "Name")], sth like that
+    # So by using map on record.items(), we apply the sanitise function on each of those tuple
     # THEN, reconstruct the dictionary record through the map object
+    # sanitised_data = [dict(map(lambda item: (sanitise_data_input(item[0]), sanitise_data_input(item[1])), record.items())) for record in data]
+
 
     # Method 3 (I think this is more readable)
+    # This is like a combination of the previous two methods
     sanitised_data = [{sanitise_data_input(key): sanitise_data_input(value) for key, value in record.items()} for record in data]
 
+    ''' End of TEMPLATE '''
+
+
+    ''' Some experiments down here (feel free to ignore them) '''
     # print(sanitised_data)
     # print(data)
     
     # for header_value in header
     # use each header_value to each record in data like data[header_value]
     # then create a dict of header_value: set(data[header_value])
-    # so that we get a dict of header_value -> unique values in the data for each header
+    # so that we get a dict of header_value -> set of (unique values) in the data for each header
     header_values = {h: set([record[h] for record in sanitised_data]) for h in header}
     
     for k, v in header_values.items():
         print(k + ": " + str(v))
 
-    ''' Some Experiments Down Below '''
+
 
     # dict of product -> price
     product_price_dict = {record["Product"]: record["Price"] for record in sanitised_data}
     print(product_price_dict)
     
 
-    # list of product_category
+    # # list of product_category
     product_category_set = set([product["Product"] for product in sanitised_data])
     print(product_category_set)
 
