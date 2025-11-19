@@ -60,9 +60,7 @@ def main():
     for k, v in header_values.items():
         print(k + ": " + str(v))
 
-    # sanitized_header_values = {key: " ".join(re.split("\s+", str(value))).strip() for key, value in header_values.items()}
-    # sanitized_header_values = {key: value for key, value in header_values.items()}
-    # print(sanitized_header_values)
+    ''' Some Experiments Down Below '''
 
     # dict of product -> price
     product_price_dict = {record["Product"]: record["Price"] for record in sanitised_data}
@@ -73,31 +71,12 @@ def main():
     product_category_set = set([product["Product"] for product in sanitised_data])
     print(product_category_set)
 
-    # a series of filtered list based on product?
-    # filtered_category_lists = []
-    # for h in header:
-    #     create_filter_function(h)
-    #     filtered_category_lists.append(h)
-    
-    # for func in filtered_category_lists:
-    #     p_func = partial(func, "Burger")
-    #     p_func(data)
-
-    # filter_by_product = create_filter_function("Product")
-    # filter_by_burger = filter_by_product("Burgers")
-    # print(list(filter_by_burger(data)))
-
-    # filter_func_by_product = [create_filter_function_by_header("Product")(row) for row in product_category_set]
-    # for product_func in filter_func_by_product:
-    #     category_data = list(product_func(data))
-    #     for d in category_data:
-    #         print(d)
 
     filter_by_product_name = create_filter_function_by_header("Product")
     # filter_func_by_product_name = list(map(filter_by_product_name, product_category_set))
     filter_func_by_product_name = list(map(filter_by_product_name, product_category_set)) # now it will be a list of tuple (product name, the list of dicts)
 
-    test_length = 0
+    test_length = 0 # for verifying the process
 
     for func in filter_func_by_product_name: # func will be a tuple of (product name, the filter function for that category)
         print(func[0]())
@@ -113,10 +92,7 @@ def main():
         # for entry in filtered_list:
         #     print(entry)
 
-    print(test_length)
-
-    # burger_sales_record = [x(data) for x in filter_func_by_product]
-
+    print(test_length) # should be 254 (255 - 1 header row)
 
 
 if (__name__ == "__main__"):
