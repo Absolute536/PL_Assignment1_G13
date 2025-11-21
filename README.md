@@ -21,5 +21,6 @@ So, it's better if we format/sanitise(?) the csv data after parsing it.
 For the whitespace issue, I've performed the clean-up in `base.py`, so the sanitised version is housed in `sanitised_data`.  
 It should be correct, but please do double check this :P.  
 
-For the "Quantity" issue, we can format it when filtering each record, either round it OR truncate the fractional part  
-**(Everyone needs to use the same method to ensure consistent result).**  
+~~For the "Quantity" issue, we can format it when filtering each record, either round it OR truncate the fractional part~~  
+**~~(Everyone needs to use the same method to ensure consistent result).~~**   
+As per the suggestion from JingYing: use the values as it is (for Quantity) to preserve accuracy

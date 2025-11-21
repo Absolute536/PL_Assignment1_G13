@@ -1,6 +1,10 @@
-# My version of the solution
-# It's kinda messy cuz I deliberately used all the map(), reduce(), filter(), etc. as per the assignment requirement
-# Idk if this is "functional" enough, but the answers should be correct (do double check this :P)
+# V2 modifications: 
+# Generalised the create_filter_function() like the initial experiment in base.py (except for create_date_filter_function_on_month)
+# This reduces the functions we need and reduce hard-coding stuff (I guess?)
+# Important Note: unique_values sets need to be derived from the header_to_values sets to preserve the ordering between them and the list of filter functions
+# The results are the same as the first version so should be correct
+# Still a little bit messy, but should be sufficient (I think?)
+# More cleanup later
 
 from functools import reduce
 import re
@@ -25,36 +29,24 @@ def calculate_total_revenue(record):
         return reduce(calculate_sum, [float(entry["Quantity"]) * float(entry["Price"]) for entry in record])
     return 0
 
-def create_product_filter_function(product_name):
-    def get_filtered_list(data):
-        return list(filter(lambda record: record["Product"] == product_name, data))
-    return get_filtered_list
+def create_filter_function_by_header(header):
+    
+    def create_filter_function_by_value(value):
 
-def create_city_filter_function(city):
-    def get_filtered_list(data):
-        return list(filter(lambda record: record["City"] == city, data))
-    return get_filtered_list
+        def get_filtered_list(data):
+            return list((filter(lambda x: x[header] == value, data)))
+        return get_filtered_list
+    
+    return create_filter_function_by_value
 
-def create_manager_filter_funtion(manager):
-    def get_filtered_list(data):
-        return list(filter(lambda record: record["Manager"] == manager, data))
-    return get_filtered_list
-
-def create_purchase_type_filter_funtion(purchase_type):
-    def get_filtered_list(data):
-        return list(filter(lambda record: record["Purchase Type"] == purchase_type, data))
-    return get_filtered_list
-
-def create_payment_method_filter_funtion(payment_method):
-    def get_filtered_list(data):
-        return list(filter(lambda record: record["Payment Method"] == payment_method, data))
-    return get_filtered_list
-
+# Exception, cuz it uses a different pattern
 def create_date_filter_function_on_month(month):
     def get_filtered_list(data):
         return list(filter(lambda record: int(record["Date"][3:5]) == int(month), data)) # or just compare the string?
     return get_filtered_list
 
+# def get_first_element_in_list(list: list):
+#     return list[0] if list else None # empty list is false, non-empty is true, so this works
 
 def main():
     header, data = parse_CSV("restaurant_sales_data.csv")
@@ -72,6 +64,12 @@ def main():
     # dict of header -> set of unique values of the column
     header_to_values = {h: set([record[h] for record in sanitised_data]) for h in header}
 
+    # List of filter functions on header
+    header_filter_functions = list(map(create_filter_function_by_header, header))
+    # Dict of header to the respective filter function on header
+    header_to_header_filter_func = {header_key: header_func for header_key, header_func in zip(header, header_filter_functions)}
+    # Dict of header to the respective list of filter functions on their unique values
+    header_to_unique_value_filter_func = {key: list(map(value, header_to_values[key])) for key, value in header_to_header_filter_func.items()}
 
     '''
     Ok, let's summarise the process from the experiment (Product)
@@ -88,6 +86,12 @@ def main():
           we can still map the results by their position, since the subsequent lists are derived from the set
           just that need to zip() the set and the derived lists if we wanna do sorting to preserve the mapping correctly
     '''
+
+    # modification
+
+    # print(header_to_unique_value_filter_func["Product"])
+    # yes, it works
+    # then for recursion, let just make do with printing?
 
     # Product based analysis
     print("Analysis based on Product")
@@ -108,14 +112,11 @@ def main():
 
     ''' Question 1: What is the best selling item in terms of quantity and revenue across all locations '''
     # A set of unique values under "Product"
-    unique_product_values = set(record["Product"] for record in sanitised_data)
-
-    # A list of filter_function for each of the unique product values
-    product_filter_function_list = list(map(create_product_filter_function, unique_product_values))
+    unique_product_values = header_to_values["Product"]
     
     # A list of lists that contain records corresponding to each product ---> [[{.....}, {....}, {.....}], [{.....}], etc.]
     # product_filtered_records = [func(sanitised_data) for func in product_filter_function_list]
-    filtered_records_on_product = list(map(lambda func: func(sanitised_data), product_filter_function_list))
+    filtered_records_on_product = list(map(lambda func: func(sanitised_data), header_to_unique_value_filter_func["Product"]))
 
     # A list containing the sum of total quantity corresponding to each product ---> [total quantity for product_1, total quantity for product_2, ... for every product type]
     # reduce_product_quantity_func = lambda record: reduce(calculate_sum, [float(entry["Quantity"]) for entry in record])
@@ -168,13 +169,12 @@ def main():
     print("----------------------------------------")
     
     # First we need to find out the sales data contain records for how many months (it's 2 duh, but let's try to find it programmitically)
-    unique_date_values = set(record["Date"] for record in sanitised_data)
+    unique_date_values = header_to_values["Date"]
     unique_month_values_from_date = set(date[3:5] for date in unique_date_values) # the 3rd and 4th index contains the month (kinda fragile but whatever~)
     number_of_months_in_dataset = len(unique_month_values_from_date)
     
-    unique_city_values = set(record["City"] for record in sanitised_data)
-    city_filter_function_list = list(map(create_city_filter_function, unique_city_values))
-    filtered_records_on_city = list(map(lambda func: func(sanitised_data), city_filter_function_list))
+    unique_city_values = header_to_values["City"]
+    filtered_records_on_city = list(map(lambda func: func(sanitised_data), header_to_unique_value_filter_func["City"]))
 
     total_revenue_for_cities = list(map(calculate_total_revenue, filtered_records_on_city))
     average_monthly_revenue_for_cities = list(map(lambda revenue: revenue / number_of_months_in_dataset, list(map(calculate_total_revenue, filtered_records_on_city))))
@@ -216,9 +216,8 @@ def main():
     print("Analysis based on Manager")
     print("-------------------------")
 
-    unique_manager_values = set(record["Manager"] for record in sanitised_data)
-    manager_filter_function_list = list(map(create_manager_filter_funtion, unique_manager_values))
-    filtered_records_by_manager = list(map(lambda func: func(sanitised_data), manager_filter_function_list))
+    unique_manager_values = header_to_values["Manager"]
+    filtered_records_by_manager = list(map(lambda func: func(sanitised_data), header_to_unique_value_filter_func["Manager"]))
     total_revenue_for_manager = list(map(calculate_total_revenue, filtered_records_by_manager))
 
     print("Managers employed by the restaurant company: ")
@@ -234,14 +233,11 @@ def main():
     print("Analysis based on Payment Method & Purchase Type")
     print("------------------------------------------------")
 
-    unique_payment_method_values = set(record["Payment Method"] for record in sanitised_data)
-    unique_purchase_type_values = set(record["Purchase Type"] for record in sanitised_data)
+    unique_payment_method_values = header_to_values["Payment Method"]
+    unique_purchase_type_values = header_to_values["Purchase Type"]
 
-    payment_method_filter_function_list = list(map(create_payment_method_filter_funtion, unique_payment_method_values))
-    purchase_type_filter_function_list = list(map(create_purchase_type_filter_funtion, unique_purchase_type_values))
-
-    filtered_records_by_payment_method = list(map(lambda func: func(sanitised_data), payment_method_filter_function_list))
-    filtered_records_by_purchase_type = list(map(lambda func: func(sanitised_data), purchase_type_filter_function_list))
+    filtered_records_by_payment_method = list(map(lambda func: func(sanitised_data), header_to_unique_value_filter_func["Payment Method"]))
+    filtered_records_by_purchase_type = list(map(lambda func: func(sanitised_data), header_to_unique_value_filter_func["Purchase Type"]))
 
     print("Payment method accepted by the company: ")
     print(*unique_payment_method_values, sep=" | ", end="\n\n")
@@ -276,11 +272,15 @@ def main():
     print(f"Total Revenue Generated (Overall): ${overall_total_revenue:.2f}\n")
 
     print("Revenue performance for each month (difference)")
+
+    # [(11, total revenue for the month), (12, total revenue for the month)]
     sorted_aggregate_based_on_revenue_by_month = sorted(zip(unique_month_values_from_date, total_revenue_by_month), key=lambda x: x[0])
+
+    # -1 cuz only 2 months, and we need to find difference between months
     for i in range(len(sorted_aggregate_based_on_revenue_by_month) - 1):
-        diff = sorted_aggregate_based_on_revenue_by_month[i + 1][1] - sorted_aggregate_based_on_revenue_by_month[i][1]
-        percentage = (diff / sorted_aggregate_based_on_revenue_by_month[i][1]) * 100
-        sign = "+" if diff >= 0 else ""
+        diff = sorted_aggregate_based_on_revenue_by_month[i + 1][1] - sorted_aggregate_based_on_revenue_by_month[i][1] # difference from next month to current
+        percentage = (diff / sorted_aggregate_based_on_revenue_by_month[i][1]) * 100 # percentage increase/decrease based on current month
+        sign = "+" if diff >= 0 else "" # sign just for display purposes
         print(f"Revenue performance from month ({sorted_aggregate_based_on_revenue_by_month[i][0]}) to month ({sorted_aggregate_based_on_revenue_by_month[i + 1][0]}): {sign}{percentage:.2f} %")
     
     print()
