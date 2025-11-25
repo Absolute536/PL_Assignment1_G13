@@ -31,6 +31,10 @@ def sanitise_data_input(entry: str):
     Pass in: "   Hello   World!        "
     Returns: "Hello World!"
     '''
+
+    # Split the input string based on 1 or more whitespaces "\s+" to obtain an array of strings that form the words in the input
+    # Join the list of strings with a single whitespace as the delimiter, thereby eliminating additional whitespaces in between
+    # Strip() on the resultant string to remove leading & trailing whitespaces
     return " ".join(re.split("\s+", entry)).strip()
 
 def calculate_sum(accumulator, value):
@@ -114,7 +118,6 @@ def create_date_filter_function_on_month(month):
         return list(filter(lambda record: int(record["Date"][3:5]) == int(month), data)) # or just compare the string?
     return get_filtered_list
 
-
 ''' These two functions are extracted to fulfill the recursive requirement '''
 def print_quantity_based_summary(zip_list):
     '''
@@ -149,14 +152,24 @@ def main():
     print()
 
     # Dict of header -> set of unique values of the column
-    header_to_values = {h: set([record[h] for record in sanitised_data]) for h in header}
+    header_to_values = {
+        h: set([record[h] for record in sanitised_data]) 
+        for h in header
+    }
     # List of filter functions on header
     header_filter_functions = list(map(create_filter_function_by_header, header))
     # Dict of header to the respective filter function on header
-    header_to_header_filter_func = {header_key: header_func for header_key, header_func in zip(header, header_filter_functions)}
+    header_to_header_filter_func = {
+        header_key: header_func 
+        for header_key, header_func in zip(header, header_filter_functions)
+    }
     # Dict of header to the respective list of filter functions on their unique values
-    header_to_unique_value_filter_func = {key: list(map(value, header_to_values[key])) for key, value in header_to_header_filter_func.items()}
-
+    header_to_unique_value_filter_func = {
+        key: list(map(value, header_to_values[key])) 
+        for key, value in header_to_header_filter_func.items()
+    }
+    # Function variable(?) for mapping
+    filter_from_dataset = lambda func: func(sanitised_data)
     '''
     Ok, let's summarise the process from the experiment (Product)
     1. obtain unique values for the header in a list
@@ -181,7 +194,7 @@ def main():
     3. sanitise the data entries in the dataset
     4. construct a list of filter functions by the header or fieldnames of the dataset using the list of header from (1.)
     5. construct a dictionary, keyed by the header of the dataset, with their respective filter functions on header as the value-pair
-       (* since the list in 3. is built from the header list in 1., that list must be used to preserve the ordering)
+       (* since the list in 4. is built from the header list in 1., that list must be used to preserve the ordering)
     6. construct a dictionary of header -> list of filter functions on the unique values for the header by transforming the dictionary from (5.)
        (* the dictionary in 1. is used to construct the respective value-pair in the dictionary, subsequent processing must be derived from 
         header_to_values to properly preserve the ordering)
@@ -198,8 +211,8 @@ def main():
     '''
 
     # Product based analysis
-    print("Analysis based on Product")
-    print("-------------------------")
+    print("Analysis based on Product (Question 1)")
+    print("--------------------------------------")
     print("Products Offered by the Restaurant Company: ")
     print(*header_to_values["Product"], sep=" | ")
     print()
@@ -219,7 +232,7 @@ def main():
     
     # A list of lists that contain records corresponding to each product ---> [[{.....}, {....}, {.....}], [{.....}], etc.]
     # product_filtered_records = [func(sanitised_data) for func in product_filter_function_list]
-    product_filtered_records = list(map(lambda func: func(sanitised_data), header_to_unique_value_filter_func["Product"]))
+    product_filtered_records = list(map(filter_from_dataset, header_to_unique_value_filter_func["Product"]))
 
     # A list containing the sum of total quantity corresponding to each product ---> [total quantity for product_1, total quantity for product_2, ... for every product type]
     # reduce_product_quantity_func = lambda record: reduce(calculate_sum, [float(entry["Quantity"]) for entry in record])
@@ -233,13 +246,8 @@ def main():
 
     ''' This is to find out the outlier, can be an additional part '''
     unique_prices_for_each_product = list(map(lambda record: set(entry["Price"] for entry in record), product_filtered_records))
-    prices_for_each_product = list(map(lambda record: list(entry["Price"] for entry in record), product_filtered_records))
-    # print("Unique Prices: ", end="")
-    # print(unique_prices_for_each_product) # so there are outlier for Prices in Chicken Sandwiches and Fries (so THAT'S WHY they don't match up after calculation)
-    # print(prices_for_each_product)
-
-    # price_occurrences = list(map(Counter, prices_for_each_product))
-    # print(price_occurrences)
+    print("Unique Prices: ", end="")
+    print(unique_prices_for_each_product, end="\n\n") # so there are outlier for Prices in Chicken Sandwiches and Fries (so THAT'S WHY they don't match up after calculation)
     ''' End of outlier investigation'''
 
     print("Quantity sold for each product")
@@ -253,8 +261,16 @@ def main():
     # We can't reuse the above collection to produce multiple sorted ones, cuz the first call to sorted() would exhaust the iterator for the collection already
     # making the next one return an [] empty list
     # also use sorted() instead of list.sort() for immutability
-    sorted_product_aggregate_on_quantity = sorted(zip(product_unique_values, product_quantity_sum, product_total_revenue), key = lambda x: x[1], reverse=True)
-    sorted_product_aggregate_on_revenue = sorted(zip(product_unique_values, product_quantity_sum, product_total_revenue), key = lambda x: x[2], reverse=True) 
+    sorted_product_aggregate_on_quantity = sorted(
+        zip(product_unique_values, product_quantity_sum, product_total_revenue), 
+        key = lambda x: x[1], 
+        reverse=True
+    )
+    sorted_product_aggregate_on_revenue = sorted(
+        zip(product_unique_values, product_quantity_sum, product_total_revenue), 
+        key = lambda x: x[2], 
+        reverse=True
+    ) 
 
     print("Top 3 best-selling products in terms of quantity sold across all citites")
     for i in range(len(sorted_product_aggregate_on_quantity) if len(sorted_product_aggregate_on_quantity) < 3 else 3):
@@ -263,13 +279,13 @@ def main():
 
     print("Top 3 best-selling products in terms of total revenue generated across all cities")
     for i in range(len(sorted_product_aggregate_on_revenue) if len(sorted_product_aggregate_on_revenue) < 3 else 3):
-        print("Top " + str(i + 1) + ": " + sorted_product_aggregate_on_revenue[i][0] + f" (${sorted_product_aggregate_on_quantity[i][2]:.2f} revenue)")
+        print("Top " + str(i + 1) + ": " + sorted_product_aggregate_on_revenue[i][0] + f" (${sorted_product_aggregate_on_revenue[i][2]:.2f} revenue)")
     print()
 
 
     ''' Question 2: Which location is the most profitable in terms of revenue & their monthly average revenue '''
-    print("Analysis based on Branch Location (City)")
-    print("----------------------------------------")
+    print("Analysis based on Branch Location / City (Question 2)")
+    print("-----------------------------------------------------")
     
     # First we need to find out the sales data contain records for how many months (it's 2 duh, but let's try to find it programmitically)
     date_unique_values = header_to_values["Date"]
@@ -277,10 +293,15 @@ def main():
     months_recorded = len(date_unique_month_values)
     
     city_unique_values = header_to_values["City"]
-    city_filtered_records = list(map(lambda func: func(sanitised_data), header_to_unique_value_filter_func["City"]))
+    city_filtered_records = list(map(filter_from_dataset, header_to_unique_value_filter_func["City"]))
 
     city_total_revenue = list(map(calculate_total_revenue, city_filtered_records))
-    city_average_monthly_revenue = list(map(lambda revenue: revenue / months_recorded, list(map(calculate_total_revenue, city_filtered_records))))
+    city_average_monthly_revenue = list(
+        map(
+            lambda revenue: revenue / months_recorded, 
+            list(map(calculate_total_revenue, city_filtered_records))
+        )
+    )
 
     print("Branch locations (city) of the restaurant company: ")
     print(*city_unique_values, sep=" | ", end="\n\n")
@@ -291,7 +312,11 @@ def main():
     print("Average monthly revenue for each branch location (city)")
     print_revenue_based_summary(list(zip(city_unique_values, city_average_monthly_revenue)))
 
-    sorted_city_aggregate_on_total_revenue = sorted(zip(city_unique_values, city_total_revenue), key=lambda x: x[1], reverse=True)
+    sorted_city_aggregate_on_total_revenue = sorted(
+        zip(city_unique_values, city_total_revenue), 
+        key=lambda x: x[1], 
+        reverse=True
+    )
     print("The most profitable branch (city) for the restaurant company in terms of revenue: ", end="")
     print(sorted_city_aggregate_on_total_revenue[0][0])
     print()
@@ -303,10 +328,16 @@ def main():
 
     # It is a list of lists filtered by city, containing two lists of records grouped by month (11 & 12)
     #[[[november records], [december records]], [[november], [december]], ....]
-    city_filtered_records_by_month = list(list(map(lambda func: func(record), date_filter_function_list_by_month)) for record in city_filtered_records)
+    city_filtered_records_by_month = list(
+        list(map(lambda func: func(record), date_filter_function_list_by_month)) 
+        for record in city_filtered_records
+    )
 
     # List of lists of revenue per city by month ---> [[november revenue, december revenue], [novem...], ...]
-    city_total_revenue_by_month = [list(map(calculate_total_revenue, city_record_month)) for city_record_month in city_filtered_records_by_month]
+    city_total_revenue_by_month = [
+        list(map(calculate_total_revenue, city_record_month)) 
+        for city_record_month in city_filtered_records_by_month
+    ]
     
     for city, record in zip(city_unique_values, city_total_revenue_by_month):
         aggregate = zip(date_unique_month_values, record)
@@ -315,11 +346,11 @@ def main():
     print()
  
     ''' Question 3: Who is the best performing manager in terms of revenue '''
-    print("Analysis based on Manager")
-    print("-------------------------")
+    print("Analysis based on Manager (Question 3)")
+    print("--------------------------------------")
 
     manager_unique_values = header_to_values["Manager"]
-    manager_filtered_records = list(map(lambda func: func(sanitised_data), header_to_unique_value_filter_func["Manager"]))
+    manager_filtered_records = list(map(filter_from_dataset, header_to_unique_value_filter_func["Manager"]))
     manager_total_revenue = list(map(calculate_total_revenue, manager_filtered_records))
 
     print("Managers employed by the restaurant company: ")
@@ -328,19 +359,23 @@ def main():
     print("Revenue generated by each manager")
     print_revenue_based_summary(list(zip(manager_unique_values, manager_total_revenue)))
     
-    sorted_manager_aggregate_on_revenue = sorted(zip(manager_unique_values, manager_total_revenue), key=lambda x: x[1], reverse=True)
+    sorted_manager_aggregate_on_revenue = sorted(
+        zip(manager_unique_values, manager_total_revenue), 
+        key=lambda x: x[1], 
+        reverse=True
+    )
     print(f"Best performing manager by revenue is: {sorted_manager_aggregate_on_revenue[0][0]}")
     print()
 
     ''' Question 4: Customer preferred payment method and purchase type '''
-    print("Analysis based on Payment Method & Purchase Type")
-    print("------------------------------------------------")
+    print("Analysis based on Payment Method & Purchase Type (Question 4)")
+    print("-------------------------------------------------------------")
 
     payment_unique_values = header_to_values["Payment Method"]
     purchase_unique_values = header_to_values["Purchase Type"]
 
-    payment_filtered_records = list(map(lambda func: func(sanitised_data), header_to_unique_value_filter_func["Payment Method"]))
-    purchase_filtered_records = list(map(lambda func: func(sanitised_data), header_to_unique_value_filter_func["Purchase Type"]))
+    payment_filtered_records = list(map(filter_from_dataset, header_to_unique_value_filter_func["Payment Method"]))
+    purchase_filtered_records = list(map(filter_from_dataset, header_to_unique_value_filter_func["Purchase Type"]))
 
     print("Payment method accepted by the company: ")
     print(*payment_unique_values, sep=" | ", end="\n\n")
@@ -349,7 +384,11 @@ def main():
     for payment, record_list in zip(payment_unique_values, payment_filtered_records):
         print(f"{payment}: {len(record_list)} records")
 
-    sorted_payment_aggregate = sorted(zip(payment_unique_values, list(map(len, payment_filtered_records))), key=lambda x: x[1], reverse=True)
+    sorted_payment_aggregate = sorted(
+        zip(payment_unique_values, list(map(len, payment_filtered_records))), 
+        key=lambda x: x[1], 
+        reverse=True
+    )
     print(f"Preferred payment method by customer (most popular): {sorted_payment_aggregate[0][0]}\n")
 
     print("Purchase type offered by the company: ")
@@ -359,17 +398,21 @@ def main():
     for purchase, record_list in zip(purchase_unique_values, purchase_filtered_records):
         print(f"{purchase}: {len(record_list)} records")
     
-    sorted_purchase_aggregate = sorted(zip(purchase_unique_values, list(map(len, purchase_filtered_records))), key=lambda x: x[1], reverse=True)
+    sorted_purchase_aggregate = sorted(
+        zip(purchase_unique_values, list(map(len, purchase_filtered_records))), 
+        key=lambda x: x[1], 
+        reverse=True
+    )
     print(f"Preferred purchase type by customer (most popular): {sorted_purchase_aggregate[0][0]}\n")
     
     ''' Question 5: Sales period based analysis (overall revenue increase or decrease over 2 months) '''
-    print("Analysis based on Sales Period")
-    print("------------------------------")
+    print("Analysis based on Sales Period (Question 5)")
+    print("-------------------------------------------")
 
     print("Sales period (months) of the restaurant company recorded in dataset: ")
     print(*date_unique_month_values, sep=" | ", end="\n\n")
 
-    month_filtered_records = list(map(lambda func: func(sanitised_data), date_filter_function_list_by_month))
+    month_filtered_records = list(map(filter_from_dataset, date_filter_function_list_by_month))
     month_total_revenue = list(map(calculate_total_revenue, month_filtered_records))
     
     print("Total revenue generated for each month")
@@ -381,7 +424,10 @@ def main():
     print("Revenue performance for each month (difference)")
 
     # [(11, total revenue for the month), (12, total revenue for the month)]
-    sorted_month_aggregate_on_revenue = sorted(zip(date_unique_month_values, month_total_revenue), key=lambda x: x[0])
+    sorted_month_aggregate_on_revenue = sorted(
+        zip(date_unique_month_values, month_total_revenue), 
+        key=lambda x: x[0]
+    )
 
     # -1 cuz we need to find difference between months (minimum 2)
     for i in range(len(sorted_month_aggregate_on_revenue) - 1):

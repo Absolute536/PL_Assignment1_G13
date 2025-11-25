@@ -4,7 +4,7 @@ This is the repository containing the contributions to Assignment 1.
 ## Work Plan
 Parse the dataset and answer some analytical questions such as:
 1. Product category based: What is the best selling item in terms of quantity and revenue across all locations?
-2. Location based: Which location is the most profitable (in terms of revenue), average monthly revenue etc.
+2. Location based: Which location is the most profitable (in terms of revenue), monthly revenue etc.
 3. Manager: Who is the best performing manager (in terms of revenue)
 4. Customer preferred payment method and purchase type (online or in-store)
 5. Time based: Overall revenue increase or decrease over the two months? Or can be based on location as well

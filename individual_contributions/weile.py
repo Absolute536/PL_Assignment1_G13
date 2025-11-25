@@ -159,7 +159,7 @@ def main():
 
     print("Top 3 best-selling products in terms of total revenue generated across all cities")
     for i in range(len(sorted_aggregate_based_on_revenue) if len(sorted_aggregate_based_on_revenue) < 3 else 3):
-        print("Top " + str(i + 1) + ": " + sorted_aggregate_based_on_revenue[i][0] + f" (${sorted_aggregate_based_on_quantity[i][2]:.2f} revenue)")
+        print("Top " + str(i + 1) + ": " + sorted_aggregate_based_on_revenue[i][0] + f" (${sorted_aggregate_based_on_revenue[i][2]:.2f} revenue)")
     print()
 
 
