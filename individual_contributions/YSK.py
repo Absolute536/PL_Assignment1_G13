@@ -80,11 +80,16 @@ def main():
         # Concept: Recursion + Lambdas
         most_preferred = recursive_find_best(percentages, lambda x, y: x if x[1] > y[1] else y)
 
+        # Output
         print(f"\n Most Preferred: {most_preferred[0]} ({most_preferred[1]:.2f}%)\n")
-        print("Full Breakdown:")
-        for val, pct in percentages:
-            print(f"{val:15} | {pct:6.2f}%")
+        print("Full Breakdown (Quantity + Percentage):")
+        
+        for val, count in zip(unique_values, counts):
+            pct = (count / total_customers) * 100
+            print(f"{val:15} | {count:4d} customers | {pct:6.2f}%")
+
 
 
 if __name__ == "__main__":
     main()
+
