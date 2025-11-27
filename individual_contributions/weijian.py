@@ -1,156 +1,116 @@
 import csv
 from functools import reduce
 import re
-import sys
 
-# === DATA HANDLING FUNCTIONS ===
+# === Helper Functions ===
 
-def parse_CSV(path):
-    """
-    Parses CSV and separates data. 
-    Concept: Separating functions and data 
-    """
-    try:
-        with open(path, mode='r', encoding='utf-8-sig') as f:
-            read_dictionary = csv.DictReader(f)
-            # Concept: List Comprehensions  for converting to list immediately
-            return (read_dictionary.fieldnames, [row for row in read_dictionary])
-    except FileNotFoundError:
-        print(f"Error: File {path} not found.")
-        return ([], [])
+def load_csv_file(filename):
+    """ Reads the CSV file directly. """
+    with open(filename, 'r') as f:
+        reader = csv.DictReader(f)
+        # Return headers and data list directly
+        return reader.fieldnames, list(reader)
 
-def sanitise_data_input(entry: str):
-    """
-    Sanitises string input.
-    Concept: Pure function
-    """
-    return " ".join(re.split(r"\s+", entry)).strip()
+def clean_text(text):
+    """ Removes extra spaces from strings. """
+    return " ".join(re.split(r"\s+", text)).strip()
 
-# === FUNCTIONAL TOOLS & HIGHER ORDER FUNCTIONS ===
+def get_product_filter(prod_name):
+    """ Returns a function that filters data for a specific product name. """
+    # This closure 'remembers' the product name
+    return lambda data_list: list(filter(lambda x: x["Product"] == prod_name, data_list))
 
-def create_product_filter_function(product_name):
-    """
-    Creates a specific filter function.
-    Concepts: 
-    - Returning functions 
-    - Lambdas 
-    """
-    # Concept: Filtering  inside a closure
-    return lambda data: list(filter(lambda record: record["Product"] == product_name, data))
-
-def calculate_sum(accumulator, value):
-    return accumulator + value
-
-def get_quantity(record):
-    return float(record["Quantity"])
-
-def get_revenue(record):
-    return float(record["Price"]) * float(record["Quantity"])
-
-def calculate_metric_total(records, mapper_func):
-    """
-    Generic function to calculate totals.
-    Concepts:
-    - Passing functions as arguments 
-    - Mapping 
-    - Reducing 
-    """
+def get_total(records, value_func):
+    """ Calculates sum of a specific field using map and reduce. """
     if not records:
         return 0.0
-    # Map the specific metric (quantity or revenue) then reduce to a sum
-    mapped_values = map(mapper_func, records)
-    return reduce(calculate_sum, mapped_values)
+    # Map the records to values, then reduce to a sum
+    values = map(value_func, records)
+    return reduce(lambda acc, x: acc + x, values)
 
-# === RECURSION (CRITICAL ADDITION) ===
-
-def recursive_find_best(items, compare_func):
+def find_max_recursive(data_list, key_func):
     """
-    Finds the best item in a list using recursion instead of max().
-    Concept: Recursion 
-    
-    :param items: List of items to search
-    :param compare_func: Lambda to determine which of two items is 'better'
-    :return: The winning item
+    Finds the item with the highest value recursively.
     """
-    # Base case: if list has one item, it is the best
-    if len(items) == 1:
-        return items[0]
+    # Base case: if only one item is left, it's the max
+    if len(data_list) == 1:
+        return data_list[0]
     
-    # Recursive step: find best in the rest of the list
-    rest_best = recursive_find_best(items[1:], compare_func)
+    # Recursive step: find max of the rest of the list
+    rest_max = find_max_recursive(data_list[1:], key_func)
+    current = data_list[0]
     
-    # Compare head of list with the best of the rest
-    return compare_func(items[0], rest_best)
+    # Compare current item vs the max of the remaining items
+    if key_func(current) > key_func(rest_max):
+        return current
+    else:
+        return rest_max
 
-# === MAIN ===
+# === Main Execution ===
 
 def main():
     # 1. Load Data
-    import os
+    # Separating function (load_csv_file) from data
+    headers, raw_rows = load_csv_file("restaurant_sales_data.csv")
     
-    # Get the directory where this script is located
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    # Go up one level to the main project directory
-    csv_path = os.path.join(script_dir, "..", "restaurant_sales_data.csv")
-    
-    header, raw_data = parse_CSV(csv_path)
-    
-    if not raw_data:
+    if not raw_rows:
         return
 
-    # 2. Sanitise Data using List Comprehension (Concept )
-    data = [
-        {sanitise_data_input(k): sanitise_data_input(v) for k, v in record.items()} 
-        for record in raw_data
+    # 2. Clean Data
+    # Using list comprehension to clean every value in the dictionary
+    clean_rows = [
+        {clean_text(k): clean_text(v) for k, v in row.items()} 
+        for row in raw_rows
     ]
     
-    # 3. Get Unique Products
-    unique_products = sorted(list(set(map(lambda r: r["Product"], data))))
+    # 3. Get List of Unique Products
+    products = sorted(list(set(map(lambda x: x["Product"], clean_rows))))
     
-    # 4. Create List of Functions (Concept )
-    # We create a list of filter functions, one for each product
-    filter_funcs = list(map(create_product_filter_function, unique_products))
+    print(f"--- Restaurant Sales Analysis ---")
+    print(f"Processing {len(products)} unique product categories...\n")
     
-    # 5. Apply Functions to Data
-    # Apply each filter function to the main dataset
-    grouped_data = list(map(lambda func: func(data), filter_funcs))
+    # 4. Create Filter Functions
+    # Making a list of functions (one for each product)
+    filters = list(map(get_product_filter, products))
     
-    # 6. Calculate Totals using Functional Map
-    # Partial application logic for mapping
-    total_quantities = list(map(lambda r: calculate_metric_total(r, get_quantity), grouped_data))
-    total_revenues = list(map(lambda r: calculate_metric_total(r, get_revenue), grouped_data))
+    # 5. Apply Filters
+    # Map the filter functions to the data to get groups
+    grouped_data = list(map(lambda f: f(clean_rows), filters))
     
-    # Zip into final structure: (Product, Quantity, Revenue)
-    product_performance = list(zip(unique_products, total_quantities, total_revenues))
+    # 6. Calculate Totals
+    # Define simple lambdas to extract the numbers we need
+    get_qty = lambda r: float(r["Quantity"])
+    get_rev = lambda r: float(r["Price"]) * float(r["Quantity"])
+    
+    # Map our calculation function across the grouped data
+    total_qtys = list(map(lambda rows: get_total(rows, get_qty), grouped_data))
+    total_revs = list(map(lambda rows: get_total(rows, get_rev), grouped_data))
+    
+    # Combine results into tuples: (Product, Quantity, Revenue)
+    results = list(zip(products, total_qtys, total_revs))
+    
+    # 7. Find Best Sellers (Using Recursion)
+    # We pass a lambda key to tell the function what value to compare
+    
+    # Index 1 is Quantity
+    best_qty_item = find_max_recursive(results, lambda x: x[1])
+    
+    # Index 2 is Revenue
+    best_rev_item = find_max_recursive(results, lambda x: x[2])
+    
+    # 8. Display Results
+    print(" Top Seller by Quantity")
+    print(f"   Product: {best_qty_item[0]}")
+    print(f"   Units:   {best_qty_item[1]:.2f}")
+    
+    print("\n Top Seller by Revenue")
+    print(f"   Product: {best_rev_item[0]}")
+    print(f"   Revenue: ${best_rev_item[2]:.2f}")
+    
+    print("\n Detailed Breakdown:")
+    print("-" * 45)
+    for p, q, r in results:
+        print(f"{p:<20} | Qty: {q:>8.2f} | Rev: ${r:>10.2f}")
 
-    print("=== PRODUCT CATEGORY ANALYSIS ===")
-    
-    # 7. Find Best Selling using RECURSION (Concept )
-    # We define lambdas to compare two tuples and return the "larger" one
-    
-    # Find max by index 1 (Quantity)
-    best_qty = recursive_find_best(
-        product_performance, 
-        lambda x, y: x if x[1] > y[1] else y
-    )
-    
-    # Find max by index 2 (Revenue)
-    best_rev = recursive_find_best(
-        product_performance, 
-        lambda x, y: x if x[2] > y[2] else y
-    )
-
-    # 8. Output Results
-    print(f"\n Best Selling by QUANTITY: {best_qty[0]}")
-    print(f"   Units: {best_qty[1]:.2f}")
-    
-    print(f"\n Best Selling by REVENUE:  {best_rev[0]}")
-    print(f"   Total: ${best_rev[2]:.2f}")
-
-    print("\nFull Breakdown:")
-    for p in product_performance:
-        print(f"{p[0]:15} | Qty: {p[1]:8.2f} | Rev: ${p[2]:10.2f}")
-
-
-
-
+if __name__ == "__main__":
+    main()
