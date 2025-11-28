@@ -137,7 +137,7 @@ def main():
 
     print("\nBest Performing Manager")
     print(
-        f"{best_manager[0]} because their revenue is the highest ({best_manager[1]:.2f})"
+        f"{best_manager[0]} because his revenue is the highest ({best_manager[1]:.2f})"
     )
 
 
