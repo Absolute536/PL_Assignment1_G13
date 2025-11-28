@@ -410,7 +410,7 @@ def main():
     print("-------------------------------------------")
 
     print("Sales period (months) of the restaurant company recorded in dataset: ")
-    print(*date_unique_month_values, sep=" | ", end="\n\n")
+    print(*sorted(date_unique_month_values), sep=" | ", end="\n\n")
 
     month_filtered_records = list(map(filter_from_dataset, date_filter_function_list_by_month))
     month_total_revenue = list(map(calculate_total_revenue, month_filtered_records))

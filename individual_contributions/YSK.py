@@ -41,7 +41,7 @@ def calculate_sum(acc, val):
 
 def main():
     import os
-    csv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "restaurant_sales_data.csv") \
+    csv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../restaurant_sales_data.csv") \
         if '__file__' in globals() else "restaurant_sales_data.csv"
 
     header, raw_data = parse_CSV(csv_path)

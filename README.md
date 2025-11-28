@@ -24,3 +24,6 @@ It should be correct, but please do double check this :P.
 ~~For the "Quantity" issue, we can format it when filtering each record, either round it OR truncate the fractional part~~  
 **~~(Everyone needs to use the same method to ensure consistent result).~~**   
 As per the suggestion from JingYing: use the values as it is (for Quantity) to preserve accuracy
+
+>[!NOTE]
+> For assessment purposes, please refer to the source files in `src`.
